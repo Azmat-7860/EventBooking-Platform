@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bgPrimary: var(--bg-primary);
+  --color-bgSurface: var(--bg-surface);
+  --color-bgElevated: var(--bg-elevated);
+  --color-accent: var(--accent);
+  --color-accentHover: var(--accent-hover);
+  --color-textPrimary: var(--text-primary);
+  --color-textMuted: var(--text-muted);
+  --color-textSubtle: var(--text-subtle);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-borderAccent: var(--border-accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --bg-primary: #0A0A0F;
+  --bg-surface: #12121A;
+  --bg-elevated: #1A1A28;
+  --accent: #00D4FF;
+  --accent-glow: rgba(0, 212, 255, 0.15);
+  --accent-hover: #00B8E0;
+  --text-primary: #FFFFFF;
+  --text-muted: #8A8A9A;
+  --text-subtle: #555566;
+  --success: #00FF88;
+  --error: #FF4466;
+  --warning: #FFB800;
+  --border: #2A2A3A;
+  --border-accent: rgba(0, 212, 255, 0.3);
+}
+
+.light {
+  --bg-primary: #F5F5F8;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #EEEEF4;
+  --text-primary: #0A0A0F;
+  --text-muted: #6B6B7B;
+  --text-subtle: #9A9AAB;
+  --border: #D0D0DA;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@utility animate-spin {
+  animation: spin 1s linear infinite;
+}
