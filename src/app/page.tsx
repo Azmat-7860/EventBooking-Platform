@@ -1,34 +1,66 @@
-"use client"
+import type { Metadata } from "next"
+import { LandingPage } from "@/components/landing/LandingPage"
 
-import { PageTransition } from "@/components/shared/PageTransition"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+const brandName = process.env.NEXT_PUBLIC_BRAND_NAME || "EventPro"
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eventpro.com"
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: `Discover & Book Premium Event Services | ${brandName}`,
+  description:
+    "Find and book the best photographers, DJs, venues, caterers, and entertainers for your next event. Browse top-rated vendors, send inquiries, and confirm your booking — all in one place.",
+  keywords: [
+    "event booking",
+    "event services",
+    "photographer",
+    "DJ",
+    "catering",
+    "venue",
+    "wedding planner",
+    "party vendor",
+    "corporate event",
+  ],
+  openGraph: {
+    title: `${brandName} — Premium Event Services Booking`,
+    description:
+      "Find and book the best photographers, DJs, venues, caterers, and entertainers for your next event.",
+    type: "website",
+    siteName: brandName,
+    url: siteUrl,
+  },
+  alternates: {
+    canonical: siteUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: brandName,
+  url: siteUrl,
+  description:
+    "Find and book the best photographers, DJs, venues, caterers, and entertainers for your next event.",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${siteUrl}/search?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
+}
+
+export default function HomePage() {
   return (
-    <PageTransition>
-      <div className="flex flex-1 flex-col">
-        <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--accent-glow)_0%,_transparent_60%)] pointer-events-none" />
-          <div className="relative z-10 max-w-3xl">
-            <h1 className="text-4xl font-bold tracking-tight text-textPrimary sm:text-6xl">
-              Discover & Book Premium{" "}
-              <span className="text-accent">Event Services</span>
-            </h1>
-            <p className="mt-6 text-lg text-textMuted sm:text-xl">
-              Find and book the best photographers, venues, caterers, and entertainers for your next event.
-            </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Button asChild size="lg">
-                <Link href="/auth">Get Started</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/auth">Browse Services</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-      </div>
-    </PageTransition>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <LandingPage />
+    </>
   )
 }

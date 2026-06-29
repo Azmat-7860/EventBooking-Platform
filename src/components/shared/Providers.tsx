@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient"
 import { ThemeProvider } from "@/context/ThemeContext"
 import { ColorProvider } from "@/context/ColorContext"
 import { AuthProvider } from "@/context/AuthContext"
+import { ToastProvider } from "@/components/shared/Toast"
 import { useTheme } from "@/context/ThemeContext"
 
 function ColorThemeBridge({ children }: { children: ReactNode }) {
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ColorThemeBridge>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
         </ColorThemeBridge>
       </ThemeProvider>
     </QueryClientProvider>
