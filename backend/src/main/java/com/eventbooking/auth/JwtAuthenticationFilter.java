@@ -39,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (user != null && !user.isSuspended()) {
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase()));
-                var authentication = new UsernamePasswordAuthenticationToken(user, null, authorities);
+                var authentication = new UsernamePasswordAuthenticationToken(userId.toString(), null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }

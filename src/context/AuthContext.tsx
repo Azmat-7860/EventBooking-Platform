@@ -49,16 +49,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (payload: LoginPayload) => {
-    const { data } = await api.post<{ success: boolean; data: AuthResponse }>(
+    const { data } = await api.post<{ success: boolean; data: Record<string, any> }>(
       "/auth/login",
       payload
     )
-    const { user, accessToken, refreshToken } = data.data
+    const { id, email, role, accessToken, refreshToken, verified, suspended, themePreference } = data.data
+    const user = {
+      id,
+      email,
+      role,
+      is_verified: verified,
+      is_suspended: suspended,
+      theme_preference: themePreference || 'light',
+      created_at: '',
+    }
     localStorage.setItem(AUTH_TOKEN_KEY, accessToken)
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
     localStorage.setItem(USER_KEY, JSON.stringify(user))
     setState({ user, token: accessToken, refreshToken, isAuthenticated: true, isLoading: false })
-    return data.data
+    return { user, accessToken, refreshToken }
   }, [])
 
   const register = useCallback(async (payload: RegisterPayload) => {
@@ -70,16 +79,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const googleLogin = useCallback(async (credential: string) => {
-    const { data } = await api.post<{ success: boolean; data: AuthResponse }>(
+    const { data } = await api.post<{ success: boolean; data: Record<string, any> }>(
       "/auth/google",
       { credential }
     )
-    const { user, accessToken, refreshToken } = data.data
+    const { id, email, role, accessToken, refreshToken, verified, suspended, themePreference } = data.data
+    const user = {
+      id,
+      email,
+      role,
+      is_verified: verified,
+      is_suspended: suspended,
+      theme_preference: themePreference || 'light',
+      created_at: '',
+    }
     localStorage.setItem(AUTH_TOKEN_KEY, accessToken)
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
     localStorage.setItem(USER_KEY, JSON.stringify(user))
     setState({ user, token: accessToken, refreshToken, isAuthenticated: true, isLoading: false })
-    return data.data
+    return { user, accessToken, refreshToken }
   }, [])
 
   const logout = useCallback(() => {
