@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { PageTransition } from "@/components/shared/PageTransition"
@@ -15,12 +15,14 @@ import { z } from "zod"
 import { UserRole } from "@/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { TiltCard } from "@/components/shared/TiltCard"
+import { ItemCard } from "@/components/cards/ItemCard"
+import { useCategories } from "@/hooks/useAdmin"
+import { usePublishedItems } from "@/hooks/usePublicItems"
 import {
   ArrowRight,
   Search,
   Send,
   CheckCircle,
-
   Star,
   Shield,
   Clock,
@@ -31,10 +33,12 @@ import {
   Lock,
   ChevronDown,
   ChevronRight,
-  Heart,
   BarChart3,
   Calendar,
   Check,
+  Loader2,
+  Package,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -61,53 +65,6 @@ type LoginForm = z.infer<typeof loginSchema>
 type RegisterForm = z.infer<typeof registerSchema>
 
 // ─── Static Data ─────────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  { emoji: "📸", label: "Photography", desc: "Capture every moment", count: 214 },
-  { emoji: "🎵", label: "Music & DJ", desc: "Set the vibe", count: 178 },
-  { emoji: "🍽️", label: "Catering", desc: "Cuisine that delights", count: 132 },
-  { emoji: "💡", label: "Lighting & AV", desc: "Stage & event lighting", count: 96 },
-  { emoji: "🌸", label: "Floral & Decor", desc: "Stunning arrangements", count: 143 },
-  { emoji: "🚗", label: "Vehicles", desc: "Luxury & bridal transport", count: 87 },
-  { emoji: "🎤", label: "MC & Host", desc: "Keep the energy high", count: 64 },
-  { emoji: "🎂", label: "Cakes & Desserts", desc: "Custom cakes for every milestone", count: 108 },
-]
-
-const FEATURED_ITEMS = [
-  {
-    emoji: "📸",
-    gradient: "from-[#1a0a2e] to-[#2d1b4e]",
-    badge: "Top Pick",
-    category: "Photography",
-    title: "Royal Wedding Photo Package",
-    vendor: "Ravi Kapoor Studios",
-    price: "Starting from ₹25,000",
-    rating: 4.9,
-    reviews: 48,
-  },
-  {
-    emoji: "🎵",
-    gradient: "from-[#0a1a2e] to-[#1b3a5e]",
-    badge: "New",
-    category: "Music & DJ",
-    title: "DJ Aryan — Full Night Set",
-    vendor: "Aryan Entertainment",
-    price: "Starting from ₹18,000",
-    rating: 4.8,
-    reviews: 31,
-  },
-  {
-    emoji: "🌸",
-    gradient: "from-[#1a2a0a] to-[#2e4a1b]",
-    badge: "Popular",
-    category: "Floral & Decor",
-    title: "Premium Mandap Decor Setup",
-    vendor: "Petal & Bloom Co.",
-    price: "Starting from ₹40,000",
-    rating: 5.0,
-    reviews: 22,
-  },
-]
 
 const STEPS = [
   {
@@ -280,7 +237,43 @@ export function LandingPage() {
   const [authError, setAuthError] = useState("")
   const [authSuccess, setAuthSuccess] = useState("")
   const [isAuthLoading, setIsAuthLoading] = useState(false)
-  const [favoured, setFavoured] = useState<Record<number, boolean>>({})
+
+  // ─── Live data ──────────────────────────────────────────────────────────
+  const { data: categories } = useCategories()
+  const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState("")
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const {
+    data: itemsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: itemsLoading,
+  } = usePublishedItems({
+    category: selectedCategory || undefined,
+    search: debouncedSearch || undefined,
+    date: selectedDate || undefined,
+  })
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) fetchNextPage() },
+      { threshold: 0.1 }
+    )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const items = useMemo(() => itemsData?.pages.flatMap((p) => p.content) || [], [itemsData])
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -625,98 +618,158 @@ export function LandingPage() {
               viewport={{ once: true, margin: "-60px" }}
               variants={stagger}
             >
-              {CATEGORIES.map((cat) => (
+              {categories?.map((cat: { id: string; name: string; icon?: string }) => (
                 <motion.div
-                  key={cat.label}
+                  key={cat.id}
                   variants={fadeUp}
-                  className="group relative flex cursor-pointer flex-col rounded-2xl border border-border bg-bgSurface p-5 transition-all duration-300 hover:border-accent/40 hover:shadow-[0_0_30px_var(--accent-glow)] hover:-translate-y-1 overflow-hidden"
+                  onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                  className={`group relative flex cursor-pointer flex-col rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 overflow-hidden ${
+                    selectedCategory === cat.id
+                      ? "border-accent bg-accent/5 shadow-[0_0_20px_var(--accent-glow)]"
+                      : "border-border bg-bgSurface hover:border-accent/40 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                  }`}
                 >
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-2xl transition-all duration-300 group-hover:bg-accent/20">
-                    {cat.emoji}
+                    {cat.icon || "📁"}
                   </div>
-                  <h3 className="font-semibold text-textPrimary">{cat.label}</h3>
-                  <p className="mt-1 text-xs text-textMuted">{cat.desc}</p>
-                  <p className="mt-3 text-xs font-medium text-accent">{cat.count} vendors →</p>
+                  <h3 className="font-semibold text-textPrimary">{cat.name}</h3>
+                  <p className="mt-3 text-xs font-medium text-accent">Click to filter →</p>
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
 
-        {/* ─── Featured Items ────────────────────────────────────────────────── */}
-        <section className="border-t border-border bg-bgSurface/30 py-20">
+        {/* ─── Services Listing ─────────────────────────────────────────────── */}
+        <section id="services" className="border-t border-border bg-bgSurface/30 py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
-              className="mb-12 flex flex-wrap items-end justify-between gap-4"
+              className="mb-12 text-center"
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-60px" }}
               variants={stagger}
             >
-              <div>
-                <motion.span
-                  variants={fadeUp}
-                  className="mb-3 inline-block rounded-full border border-accent/25 bg-accent/10 px-4 py-1 text-xs font-medium uppercase tracking-widest text-accent"
-                >
-                  Trending now
-                </motion.span>
-                <motion.h2 variants={fadeUp} className="text-3xl font-bold text-textPrimary">
-                  Top-rated services this week
-                </motion.h2>
-              </div>
-              <motion.div variants={fadeUp}>
-                <Button asChild variant="outline" size="sm" className="gap-1">
-                  <Link href="/">
-                    View all <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </Button>
-              </motion.div>
+              <motion.span
+                variants={fadeUp}
+                className="mb-3 inline-block rounded-full border border-accent/25 bg-accent/10 px-4 py-1 text-xs font-medium uppercase tracking-widest text-accent"
+              >
+                Browse services
+              </motion.span>
+              <motion.h2 variants={fadeUp} className="text-3xl font-bold text-textPrimary">
+                Find the perfect vendor
+              </motion.h2>
             </motion.div>
 
+            {/* Search + Filter bar */}
             <motion.div
-              className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={stagger}
+              variants={fadeUp}
+              className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center"
             >
-              {FEATURED_ITEMS.map((item, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeUp}
-                  className="group overflow-hidden rounded-2xl border border-border bg-bgSurface transition-all duration-300 hover:-translate-y-1 hover:border-accent/25 hover:shadow-[0_16px_40px_var(--accent-glow)] cursor-pointer"
-                >
-                  {/* Thumbnail */}
-                  <div className={`relative h-44 bg-gradient-to-br ${item.gradient} flex items-center justify-center text-5xl`}>
-                    {item.emoji}
-                    <span className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/60 px-3 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
-                      {item.badge}
-                    </span>
-                    <button
-                      onClick={() => setFavoured((f) => ({ ...f, [i]: !f[i] }))}
-                      className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/60 backdrop-blur-sm transition-colors hover:bg-black/80"
-                    >
-                      <Heart className={`h-3.5 w-3.5 ${favoured[i] ? "fill-accent text-accent" : "text-white"}`} />
-                    </button>
-                  </div>
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-textMuted" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search services..."
+                  className="pl-10 pr-9"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
 
-                  {/* Body */}
-                  <div className="p-4">
-                    <p className="text-xs font-medium text-accent">{item.category}</p>
-                    <h3 className="mt-1 font-semibold text-textPrimary leading-snug">{item.title}</h3>
-                    <p className="mt-0.5 text-xs text-textMuted">by {item.vendor}</p>
-                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                      <span className="text-xs text-textMuted">{item.price}</span>
-                      <div className="flex items-center gap-1.5">
-                        <StarRating rating={item.rating} />
-                        <span className="text-xs text-textMuted">{item.rating} ({item.reviews})</span>
-                      </div>
+              {/* Date filter */}
+              <div className="relative shrink-0">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-textMuted pointer-events-none" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="flex h-10 w-full min-w-[150px] rounded-xl border border-border bg-bgSurface px-10 py-2 text-sm text-textPrimary placeholder:text-textMuted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent [color-scheme:dark]"
+                />
+                {selectedDate && (
+                  <button
+                    onClick={() => setSelectedDate("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Active filters */}
+              {selectedCategory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                  className="gap-1.5 shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" /> {categories?.find((c: { id: string; name: string }) => c.id === selectedCategory)?.name || "Category"}
+                </Button>
+              )}
+            </motion.div>
+
+            {/* Items Grid */}
+            {itemsLoading ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl border border-border bg-bgSurface overflow-hidden animate-pulse">
+                    <div className="aspect-[4/3] bg-bgElevated" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-4 w-3/4 rounded bg-bgElevated" />
+                      <div className="h-3 w-1/2 rounded bg-bgElevated" />
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Package className="h-12 w-12 text-textSubtle mb-4" />
+                <p className="text-textMuted text-sm">No services found</p>
+                {(search || selectedCategory || selectedDate) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setSearch(""); setSelectedCategory(null); setSelectedDate("") }}
+                    className="mt-3"
+                  >
+                    Clear all filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <motion.div
+                  className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={stagger}
+                >
+                  {items.map((item, i) => (
+                    <ItemCard key={item.id} item={item} index={i} />
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
+
+                {/* Infinite scroll sentinel */}
+                <div ref={sentinelRef} className="flex justify-center py-10">
+                  {isFetchingNextPage && (
+                    <Loader2 className="h-5 w-5 animate-spin text-textMuted" />
+                  )}
+                  {!hasNextPage && items.length > 0 && (
+                    <p className="text-xs text-textMuted">All services loaded</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </section>
 

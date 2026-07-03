@@ -9,4 +9,14 @@ export const vendorService = {
 
   updateProfile: (data: Partial<VendorProfile>) =>
     api.put("/vendor/profile", data),
+
+  uploadLogo: (file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return api.post("/vendor/profile/logo", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+  },
+
+  getPublicProfile: (userId: string) => api.get(`/public/vendors/${userId}/profile`),
 }

@@ -2,10 +2,19 @@ package com.eventbooking.item;
 
 import com.eventbooking.common.ApiResponse;
 import com.eventbooking.storage.StorageService;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.Normalizer;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -52,6 +61,29 @@ public class ItemService {
         return itemRepo.findBySlug(slug)
             .map(ApiResponse::ok)
             .orElse(ApiResponse.error("Item not found"));
+    }
+
+    public ApiResponse<Page<Item>> getPublishedItems(String category, String search, LocalDate date, int page, int size) {
+        Specification<Item> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("status"), "published"));
+            if (category != null && !category.isBlank()) {
+                predicates.add(cb.equal(root.get("categoryId"), UUID.fromString(category)));
+            }
+            if (search != null && !search.isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%"));
+            }
+            if (date != null) {
+                Subquery<UUID> subquery = query.subquery(UUID.class);
+                Root<ItemAvailability> availRoot = subquery.from(ItemAvailability.class);
+                subquery.select(availRoot.get("itemId"))
+                        .where(cb.equal(availRoot.get("blockedDate"), date));
+                predicates.add(cb.not(root.get("id").in(subquery)));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ApiResponse.ok(itemRepo.findAll(spec, pageRequest));
     }
 
     public ApiResponse<Item> getById(UUID id) {
@@ -154,6 +186,16 @@ public class ItemService {
         }).orElse(ApiResponse.error("Item not found"));
     }
 
+    public ApiResponse<Item> deleteVideo(UUID itemId, UUID vendorId) {
+        return itemRepo.findById(itemId).map(item -> {
+            if (!item.getVendorId().equals(vendorId)) {
+                return ApiResponse.<Item>error("Not authorized");
+            }
+            item.setVideoUrl(null);
+            return ApiResponse.ok(itemRepo.save(item));
+        }).orElse(ApiResponse.error("Item not found"));
+    }
+
     // ─── Availability ─────────────────────────────────────────────────────
 
     public ApiResponse<List<ItemAvailability>> getAvailability(UUID itemId) {
@@ -197,6 +239,56 @@ public class ItemService {
     public ApiResponse<Bundle> createBundle(Bundle bundle, UUID vendorId) {
         bundle.setVendorId(vendorId);
         return ApiResponse.ok(bundleRepo.save(bundle));
+    }
+
+    public ApiResponse<Bundle> getBundle(UUID bundleId, UUID vendorId) {
+        return bundleRepo.findById(bundleId)
+            .filter(b -> b.getVendorId().equals(vendorId))
+            .map(ApiResponse::ok)
+            .orElse(ApiResponse.error("Bundle not found"));
+    }
+
+    public ApiResponse<Bundle> updateBundle(UUID bundleId, Bundle updated, UUID vendorId) {
+        return bundleRepo.findById(bundleId).map(b -> {
+            if (!b.getVendorId().equals(vendorId)) {
+                return ApiResponse.<Bundle>error("Not authorized");
+            }
+            b.setName(updated.getName());
+            b.setDescription(updated.getDescription());
+            return ApiResponse.ok(bundleRepo.save(b));
+        }).orElse(ApiResponse.error("Bundle not found"));
+    }
+
+    public ApiResponse<List<BundleItem>> getBundleItems(UUID bundleId, UUID vendorId) {
+        return bundleRepo.findById(bundleId)
+            .filter(b -> b.getVendorId().equals(vendorId))
+            .map(b -> ApiResponse.<List<BundleItem>>ok(bundleItemRepo.findByBundleId(bundleId)))
+            .orElse(ApiResponse.error("Bundle not found"));
+    }
+
+    public ApiResponse<BundleItem> addBundleItem(UUID bundleId, UUID itemId, UUID vendorId) {
+        return bundleRepo.findById(bundleId).map(b -> {
+            if (!b.getVendorId().equals(vendorId)) {
+                return ApiResponse.<BundleItem>error("Not authorized");
+            }
+            BundleItem bi = new BundleItem();
+            bi.setBundleId(bundleId);
+            bi.setItemId(itemId);
+            return ApiResponse.ok(bundleItemRepo.save(bi));
+        }).orElse(ApiResponse.error("Bundle not found"));
+    }
+
+    public ApiResponse<Void> removeBundleItem(UUID bundleId, UUID itemId, UUID vendorId) {
+        return bundleRepo.findById(bundleId).map(b -> {
+            if (!b.getVendorId().equals(vendorId)) {
+                return ApiResponse.<Void>error("Not authorized");
+            }
+            bundleItemRepo.findByBundleId(bundleId).stream()
+                .filter(bi -> bi.getItemId().equals(itemId))
+                .findFirst()
+                .ifPresent(bi -> bundleItemRepo.deleteById(bi.getId()));
+            return ApiResponse.<Void>ok(null);
+        }).orElse(ApiResponse.error("Bundle not found"));
     }
 
     public ApiResponse<Void> deleteBundle(UUID bundleId, UUID vendorId) {

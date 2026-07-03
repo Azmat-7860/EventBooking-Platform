@@ -1,10 +1,12 @@
 package com.eventbooking.profile;
 
 import com.eventbooking.common.ApiResponse;
+import com.eventbooking.storage.StorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -14,9 +16,11 @@ import java.util.UUID;
 public class VendorProfileController {
 
     private final VendorProfileRepository repo;
+    private final StorageService storageService;
 
-    public VendorProfileController(VendorProfileRepository repo) {
+    public VendorProfileController(VendorProfileRepository repo, StorageService storageService) {
         this.repo = repo;
+        this.storageService = storageService;
     }
 
     private UUID getUserId(Authentication auth) {
@@ -48,6 +52,17 @@ public class VendorProfileController {
             existing.setAddress(profile.getAddress());
             existing.setCity(profile.getCity());
             existing.setLogoUrl(profile.getLogoUrl());
+            return ResponseEntity.ok(ApiResponse.ok(repo.save(existing)));
+        }).orElse(ResponseEntity.badRequest().body(ApiResponse.error("Vendor profile not found")));
+    }
+
+    @PostMapping("/logo")
+    public ResponseEntity<ApiResponse<VendorProfile>> uploadLogo(
+            @RequestParam("file") MultipartFile file, Authentication auth) {
+        UUID userId = getUserId(auth);
+        return repo.findByUserId(userId).map(existing -> {
+            String url = storageService.uploadPhoto(file);
+            existing.setLogoUrl(url);
             return ResponseEntity.ok(ApiResponse.ok(repo.save(existing)));
         }).orElse(ResponseEntity.badRequest().body(ApiResponse.error("Vendor profile not found")));
     }

@@ -69,6 +69,16 @@ export interface Item {
   createdAt: string
 }
 
+export interface PaginatedResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+  first: boolean
+  last: boolean
+}
+
 export interface ItemPhoto {
   id: string
   itemId: string
@@ -89,6 +99,12 @@ export interface Bundle {
   name: string
   description: string
   createdAt: string
+}
+
+export interface BundleItem {
+  id: string
+  bundleId: string
+  itemId: string
 }
 
 export interface VendorProfile {

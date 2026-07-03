@@ -77,6 +77,22 @@ export function useDeletePhoto(itemId: string) {
   })
 }
 
+export function useUploadVideo(itemId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => itemsService.uploadVideo(itemId, file).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["item", itemId] }),
+  })
+}
+
+export function useDeleteVideo(itemId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => itemsService.deleteVideo(itemId).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["item", itemId] }),
+  })
+}
+
 export function useAvailability(itemId: string) {
   return useQuery({
     queryKey: ["availability", itemId],
@@ -101,5 +117,73 @@ export function useUnblockDate(itemId: string) {
   return useMutation({
     mutationFn: (dateId: string) => itemsService.unblockDate(itemId, dateId).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["availability", itemId] }),
+  })
+}
+
+// ─── Bundle Hooks ──────────────────────────────────────────────────────────
+
+export function useBundles() {
+  return useQuery({
+    queryKey: ["bundles"],
+    queryFn: async () => {
+      const { data } = await itemsService.getBundles()
+      return data.data
+    },
+  })
+}
+
+export function useCreateBundle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { name: string; description?: string }) =>
+      itemsService.createBundle(payload).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bundles"] }),
+  })
+}
+
+export function useUpdateBundle(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { name: string; description?: string }) =>
+      itemsService.updateBundle(id, payload).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bundles"] })
+      qc.invalidateQueries({ queryKey: ["bundle", id] })
+    },
+  })
+}
+
+export function useDeleteBundle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => itemsService.deleteBundle(id).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bundles"] }),
+  })
+}
+
+export function useBundleItems(bundleId: string) {
+  return useQuery({
+    queryKey: ["bundle-items", bundleId],
+    queryFn: async () => {
+      const { data } = await itemsService.getBundleItems(bundleId)
+      return data.data
+    },
+    enabled: !!bundleId,
+  })
+}
+
+export function useAddBundleItem(bundleId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (itemId: string) => itemsService.addBundleItem(bundleId, itemId).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bundle-items", bundleId] }),
+  })
+}
+
+export function useRemoveBundleItem(bundleId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (itemId: string) => itemsService.removeBundleItem(bundleId, itemId).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bundle-items", bundleId] }),
   })
 }

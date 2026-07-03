@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, BarChart3, Users, Home, Search } from "lucide-react"
+import { LayoutDashboard, Package, BarChart3, Users, Home, Search, Gift } from "lucide-react"
 
 const publicLinks = [
   { href: "/", label: "Home", icon: Home },
@@ -14,6 +14,7 @@ const publicLinks = [
 const vendorLinks = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vendor/items", label: "Items", icon: Package },
+  { href: "/vendor/bundles", label: "Bundles", icon: Gift },
   { href: "/vendor/analytics", label: "Analytics", icon: BarChart3 },
 ]
 

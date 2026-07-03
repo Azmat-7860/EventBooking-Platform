@@ -1,11 +1,13 @@
 package com.eventbooking.item;
 
 import com.eventbooking.common.ApiResponse;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +26,16 @@ public class ItemController {
     }
 
     // ─── Public ───────────────────────────────────────────────────────────
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<Item>>> listPublished(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return ResponseEntity.ok(service.getPublishedItems(category, search, date, page, size));
+    }
 
     @GetMapping("/{slugOrId}")
     public ResponseEntity<ApiResponse<Item>> getBySlug(@PathVariable String slugOrId) {
@@ -87,6 +99,12 @@ public class ItemController {
     public ResponseEntity<ApiResponse<Item>> uploadVideo(
             @PathVariable UUID id, @RequestParam("file") MultipartFile file, Authentication auth) {
         return ResponseEntity.ok(service.uploadVideo(id, file, getUserId(auth)));
+    }
+
+    @DeleteMapping("/{id}/video")
+    public ResponseEntity<ApiResponse<Item>> deleteVideo(
+            @PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(service.deleteVideo(id, getUserId(auth)));
     }
 
     // ─── Availability ─────────────────────────────────────────────────────
