@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { ThemeToggle } from "./ThemeToggle"
 import { Button } from "@/components/ui/button"
 import { useVendorBookingCounts } from "@/hooks/useBooking"
-import { LogOut, User, LayoutDashboard, CalendarRange, Bell } from "lucide-react"
+import { LogOut, User, LayoutDashboard, CalendarRange, Bell, Search } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-border bg-bgPrimary/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="text-xl font-bold text-accent">
             {process.env.NEXT_PUBLIC_BRAND_NAME || "EventPro"}
           </span>
@@ -54,6 +54,11 @@ export function Navbar() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/browse" className="flex items-center">
+                    <Search className="mr-2 h-4 w-4" /> Browse Services
+                  </Link>
+                </DropdownMenuItem>
                 {user?.role === "customer" && (
                   <DropdownMenuItem asChild>
                     <Link href="/bookings" className="flex items-center">

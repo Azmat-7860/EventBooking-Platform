@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { PageTransition } from "@/components/shared/PageTransition"
@@ -15,9 +15,8 @@ import { z } from "zod"
 import { UserRole } from "@/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { TiltCard } from "@/components/shared/TiltCard"
-import { ItemCard } from "@/components/cards/ItemCard"
 import { useCategories } from "@/hooks/useAdmin"
-import { usePublishedItems } from "@/hooks/usePublicItems"
+import { ServicesListing } from "@/components/shared/ServicesListing"
 import {
   ArrowRight,
   Search,
@@ -34,11 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   BarChart3,
-  Calendar,
   Check,
-  Loader2,
-  Package,
-  X,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -240,40 +235,6 @@ export function LandingPage() {
 
   // ─── Live data ──────────────────────────────────────────────────────────
   const { data: categories } = useCategories()
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState("")
-  const sentinelRef = useRef<HTMLDivElement>(null)
-
-  const {
-    data: itemsData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading: itemsLoading,
-  } = usePublishedItems({
-    category: selectedCategory || undefined,
-    search: debouncedSearch || undefined,
-    date: selectedDate || undefined,
-  })
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(timer)
-  }, [search])
-
-  useEffect(() => {
-    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) fetchNextPage() },
-      { threshold: 0.1 }
-    )
-    observer.observe(sentinelRef.current)
-    return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  const items = useMemo(() => itemsData?.pages.flatMap((p) => p.content) || [], [itemsData])
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -291,7 +252,7 @@ export function LandingPage() {
     try {
       const res = await login(data)
       const redirect =
-        res.user.role === "vendor" ? "/vendor/dashboard" : res.user.role === "admin" ? "/admin" : "/bookings"
+        res.user.role === "vendor" ? "/vendor/dashboard" : res.user.role === "admin" ? "/admin" : "/browse"
       router.push(redirect)
     } catch (err: unknown) {
       const message =
@@ -397,7 +358,7 @@ export function LandingPage() {
                   className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start"
                 >
                   <Button asChild size="lg" className="group gap-2">
-                    <Link href="#categories">
+                    <Link href="/browse">
                       Browse services
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Link>
@@ -438,8 +399,8 @@ export function LandingPage() {
                       <h2 className="text-2xl font-bold text-textPrimary mb-2">Welcome back!</h2>
                       <p className="text-sm text-textMuted mb-6">You are signed in.</p>
                       <Button asChild className="w-full gap-2">
-                        <Link href="/bookings">
-                          <CalendarCheck className="h-4 w-4" /> View My Bookings
+                        <Link href="/browse">
+                           <CalendarCheck className="h-4 w-4" /> {/*Browse Items */}Browse Services
                         </Link>
                       </Button>
                     </div>
@@ -548,7 +509,7 @@ export function LandingPage() {
                               className="flex-1 text-sm"
                               onClick={() => registerForm.setValue("role", "customer")}
                             >
-                              Book services
+                              Book Items 
                             </Button>
                             <Button
                               type="button"
@@ -640,158 +601,26 @@ export function LandingPage() {
               variants={stagger}
             >
               {categories?.map((cat: { id: string; name: string; icon?: string }) => (
-                <motion.div
+                <Link
                   key={cat.id}
-                  variants={fadeUp}
-                  onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                  className={`group relative flex cursor-pointer flex-col rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 overflow-hidden ${
-                    selectedCategory === cat.id
-                      ? "border-accent bg-accent/5 shadow-[0_0_20px_var(--accent-glow)]"
-                      : "border-border bg-bgSurface hover:border-accent/40 hover:shadow-[0_0_30px_var(--accent-glow)]"
-                  }`}
+                  href={`/browse?category=${cat.id}`}
+                  className="group relative flex flex-col rounded-2xl border border-border bg-bgSurface p-5 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden"
                 >
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-2xl transition-all duration-300 group-hover:bg-accent/20">
                     {cat.icon || "📁"}
                   </div>
                   <h3 className="font-semibold text-textPrimary">{cat.name}</h3>
-                  <p className="mt-3 text-xs font-medium text-accent">Click to filter →</p>
-                </motion.div>
+                  <p className="mt-3 text-xs font-medium text-accent">View services →</p>
+                </Link>
               ))}
             </motion.div>
           </div>
         </section>
 
         {/* ─── Services Listing ─────────────────────────────────────────────── */}
-        <section id="services" className="border-t border-border bg-bgSurface/30 py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              className="mb-12 text-center"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={stagger}
-            >
-              <motion.span
-                variants={fadeUp}
-                className="mb-3 inline-block rounded-full border border-accent/25 bg-accent/10 px-4 py-1 text-xs font-medium uppercase tracking-widest text-accent"
-              >
-                Browse services
-              </motion.span>
-              <motion.h2 variants={fadeUp} className="text-3xl font-bold text-textPrimary">
-                Find the perfect vendor
-              </motion.h2>
-            </motion.div>
-
-            {/* Search + Filter bar */}
-            <motion.div
-              variants={fadeUp}
-              className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center"
-            >
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-textMuted" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search services..."
-                  className="pl-10 pr-9"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Date filter */}
-              <div className="relative shrink-0">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-textMuted pointer-events-none" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="flex h-10 w-full min-w-[150px] rounded-xl border border-border bg-bgSurface px-10 py-2 text-sm text-textPrimary placeholder:text-textMuted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent [color-scheme:dark]"
-                />
-                {selectedDate && (
-                  <button
-                    onClick={() => setSelectedDate("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Active filters */}
-              {selectedCategory && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  className="gap-1.5 shrink-0"
-                >
-                  <X className="h-3.5 w-3.5" /> {categories?.find((c: { id: string; name: string }) => c.id === selectedCategory)?.name || "Category"}
-                </Button>
-              )}
-            </motion.div>
-
-            {/* Items Grid */}
-            {itemsLoading ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="rounded-2xl border border-border bg-bgSurface overflow-hidden animate-pulse">
-                    <div className="aspect-[4/3] bg-bgElevated" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-4 w-3/4 rounded bg-bgElevated" />
-                      <div className="h-3 w-1/2 rounded bg-bgElevated" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Package className="h-12 w-12 text-textSubtle mb-4" />
-                <p className="text-textMuted text-sm">No services found</p>
-                {(search || selectedCategory || selectedDate) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setSearch(""); setSelectedCategory(null); setSelectedDate("") }}
-                    className="mt-3"
-                  >
-                    Clear all filters
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <motion.div
-                  className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-                  initial="hidden"
-                  animate="visible"
-                  variants={stagger}
-                >
-                  {items.map((item, i) => (
-                    <ItemCard key={item.id} item={item} index={i} />
-                  ))}
-                </motion.div>
-
-                {/* Infinite scroll sentinel */}
-                <div ref={sentinelRef} className="flex justify-center py-10">
-                  {isFetchingNextPage && (
-                    <Loader2 className="h-5 w-5 animate-spin text-textMuted" />
-                  )}
-                  {!hasNextPage && items.length > 0 && (
-                    <p className="text-xs text-textMuted">All services loaded</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+        <section id="services" className="border-t border-border bg-bgSurface/30">
+          <ServicesListing showHeader={true} />
         </section>
 
         {/* ─── How It Works ─────────────────────────────────────────────────── */}
@@ -1000,9 +829,15 @@ export function LandingPage() {
             Event<span className="text-accent">Pro</span>
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-6">
-            {["Browse services", "List your service", "How it works", "Privacy policy", "Contact"].map((link) => (
-              <Link key={link} href="#" className="text-sm text-textMuted hover:text-accent transition-colors">
-                {link}
+            {[
+              { label: "Browse services", href: "/browse" },
+              { label: "List your service", href: "/auth" },
+              { label: "How it works", href: "/#how-it-works" },
+              { label: "Privacy policy", href: "#" },
+              { label: "Contact", href: "#" },
+            ].map((link) => (
+              <Link key={link.label} href={link.href} className="text-sm text-textMuted hover:text-accent transition-colors">
+                {link.label}
               </Link>
             ))}
           </div>

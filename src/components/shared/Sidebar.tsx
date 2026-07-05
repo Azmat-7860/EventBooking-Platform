@@ -15,6 +15,8 @@ import {
   Layers,
   Gift,
   MessageSquare,
+  Search,
+  CalendarRange,
 } from "lucide-react"
 
 interface SidebarLink {
@@ -31,6 +33,11 @@ const vendorLinks: SidebarLink[] = [
   { href: "/vendor/analytics", label: "Analytics", icon: BarChart3 },
 ]
 
+const customerLinks: SidebarLink[] = [
+  { href: "/browse", label: "Browse", icon: Search },
+  { href: "/bookings", label: "My Bookings", icon: CalendarRange },
+]
+
 const adminLinks: SidebarLink[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
@@ -42,9 +49,13 @@ const adminLinks: SidebarLink[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
-  const links = user?.role === "admin" ? adminLinks : vendorLinks
 
-  if (!user || (user.role !== "vendor" && user.role !== "admin")) return null
+  const links =
+    user?.role === "customer" ? customerLinks
+    : user?.role === "admin" ? adminLinks
+    : vendorLinks
+
+  if (!user) return null
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-bgSurface/50 backdrop-blur-sm md:block">
