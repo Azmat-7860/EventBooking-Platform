@@ -2,20 +2,45 @@
 
 export const dynamic = "force-dynamic"
 
+import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute"
 import { PageTransition } from "@/components/shared/PageTransition"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatsCard } from "@/components/shared/StatsCard"
 import { useAuth } from "@/context/AuthContext"
+import { adminService } from "@/services/admin.service"
+import { analyticsService } from "@/services/analytics.service"
 import { staggerContainer, fadeUp } from "@/components/shared/animations"
-import { Layers, Users, BookOpen, Star } from "lucide-react"
-import { useCategories } from "@/hooks/useAdmin"
+import { Layers, Users, BookOpen, Star, Eye, MessageSquare, Share2, Loader2, CalendarDays } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
   const { user } = useAuth()
-  const { data: categories } = useCategories()
+
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data } = await adminService.getCategories()
+      return data.data
+    },
+  })
+
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: async () => {
+      const { data } = await adminService.getStats()
+      return data.data
+    },
+  })
+
+  const { data: analytics } = useQuery({
+    queryKey: ["admin-analytics"],
+    queryFn: async () => {
+      const { data } = await analyticsService.getAdminAnalytics()
+      return data.data
+    },
+  })
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -28,6 +53,7 @@ export default function AdminDashboard() {
               subtitle={`Welcome back, ${user?.email?.split("@")[0] || "admin"}`}
             />
 
+            {/* Stats Cards */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -35,11 +61,70 @@ export default function AdminDashboard() {
               className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8"
             >
               <StatsCard icon={Layers} label="Categories" value={categories?.length || 0} accent />
-              <StatsCard icon={Users} label="Users" value="—" />
-              <StatsCard icon={BookOpen} label="Bookings" value="—" />
-              <StatsCard icon={Star} label="Reviews" value="—" />
+              <StatsCard icon={Users} label="Users" value={stats?.totalUsers || 0} />
+              <StatsCard icon={BookOpen} label="Bookings" value={stats?.totalBookings || 0} />
+              <StatsCard icon={Star} label="Reviews" value={stats?.totalReviews || 0} />
             </motion.div>
 
+            {/* Analytics Summary */}
+            {analytics && (
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="grid gap-4 sm:grid-cols-3 mb-8"
+              >
+                <StatsCard icon={Eye} label="Views (30d)" value={analytics.totalViews || 0} />
+                <StatsCard icon={MessageSquare} label="Inquiries (30d)" value={analytics.totalInquiries || 0} />
+                <StatsCard icon={Share2} label="Shares (30d)" value={analytics.totalShares || 0} />
+              </motion.div>
+            )}
+
+            {/* Monthly Inquiries Chart */}
+            {analytics?.monthlyInquiries?.length > 0 && (
+              <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-bgSurface p-5 sm:p-6 mb-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+                    <CalendarDays className="h-4 w-4 text-accent" />
+                  </div>
+                  <span className="text-sm font-semibold text-textPrimary">Inquiries per Month</span>
+                </div>
+                <div className="space-y-3">
+                  {analytics.monthlyInquiries.map((item: { month: string; count: number }, i: number) => {
+                    const maxCount = Math.max(...analytics.monthlyInquiries.map((m: { count: number }) => m.count))
+                    const pct = maxCount > 0 ? (item.count / maxCount) * 100 : 0
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <span className="w-20 text-xs text-textMuted shrink-0">
+                          {new Date(item.month).toLocaleDateString("default", { month: "short", year: "numeric" })}
+                        </span>
+                        <div className="flex-1 h-5 rounded-lg bg-bgElevated overflow-hidden">
+                          <div className="h-full rounded-lg bg-accent transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-8 text-xs font-medium text-textPrimary text-right">{item.count}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Top Items */}
+            {analytics?.topItems?.length > 0 && (
+              <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-bgSurface p-5 sm:p-6 mb-8">
+                <h3 className="text-sm font-semibold text-textPrimary mb-4">Top 5 Services by Inquiries</h3>
+                <div className="space-y-2">
+                  {analytics.topItems.map((item: { itemId: string; count: number }, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-bgElevated">
+                      <span className="text-sm text-textPrimary">{item.itemId.slice(0, 8)}...</span>
+                      <span className="text-sm font-medium text-accent">{item.count} inquiries</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Management Cards */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -69,54 +154,69 @@ export default function AdminDashboard() {
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <div className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface/50 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bgElevated">
-                      <Users className="h-6 w-6 text-textMuted" />
+                <Link
+                  href="/admin/users"
+                  className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                      <Users className="h-6 w-6 text-accent" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-textMuted">Users</h3>
+                      <h3 className="text-lg font-semibold text-textPrimary">Users</h3>
                       <p className="mt-1 text-sm text-textMuted">Manage platform users</p>
-                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-textSubtle">
-                        Coming in Phase 6
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
+                        {stats?.totalUsers || 0} users
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <div className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface/50 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bgElevated">
-                      <BookOpen className="h-6 w-6 text-textMuted" />
+                <Link
+                  href="/admin/bookings"
+                  className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                      <BookOpen className="h-6 w-6 text-accent" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-textMuted">Bookings</h3>
+                      <h3 className="text-lg font-semibold text-textPrimary">Bookings</h3>
                       <p className="mt-1 text-sm text-textMuted">View all platform bookings</p>
-                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-textSubtle">
-                        Coming in Phase 6
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
+                        {stats?.totalBookings || 0} bookings
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <div className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface/50 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bgElevated">
-                      <Star className="h-6 w-6 text-textMuted" />
+                <Link
+                  href="/admin/reviews"
+                  className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                      <Star className="h-6 w-6 text-accent" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-textMuted">Reviews</h3>
+                      <h3 className="text-lg font-semibold text-textPrimary">Reviews</h3>
                       <p className="mt-1 text-sm text-textMuted">Moderate platform reviews</p>
-                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-textSubtle">
-                        Coming in Phase 6
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
+                        {stats?.totalReviews || 0} reviews
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
             </motion.div>
           </div>

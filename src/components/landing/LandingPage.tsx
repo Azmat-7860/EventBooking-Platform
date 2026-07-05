@@ -230,7 +230,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function LandingPage() {
-  const { login, register } = useAuth()
+  const { login, register, isAuthenticated } = useAuth()
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login")
@@ -291,7 +291,7 @@ export function LandingPage() {
     try {
       const res = await login(data)
       const redirect =
-        res.user.role === "vendor" ? "/vendor/dashboard" : res.user.role === "admin" ? "/admin" : "/"
+        res.user.role === "vendor" ? "/vendor/dashboard" : res.user.role === "admin" ? "/admin" : "/bookings"
       router.push(redirect)
     } catch (err: unknown) {
       const message =
@@ -426,6 +426,26 @@ export function LandingPage() {
               </motion.div>
 
               {/* Auth card */}
+              {isAuthenticated ? (
+                <motion.div
+                  className="w-full max-w-md mx-auto lg:mx-0 lg:shrink-0"
+                  initial={{ opacity: 0, y: 32 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <TiltCard>
+                    <div className="text-center py-8">
+                      <h2 className="text-2xl font-bold text-textPrimary mb-2">Welcome back!</h2>
+                      <p className="text-sm text-textMuted mb-6">You are signed in.</p>
+                      <Button asChild className="w-full gap-2">
+                        <Link href="/bookings">
+                          <CalendarCheck className="h-4 w-4" /> View My Bookings
+                        </Link>
+                      </Button>
+                    </div>
+                  </TiltCard>
+                </motion.div>
+              ) : (
               <motion.div
                 className="w-full max-w-md mx-auto lg:mx-0 lg:shrink-0"
                 initial={{ opacity: 0, y: 32 }}
@@ -565,6 +585,7 @@ export function LandingPage() {
                   </Tabs>
                 </TiltCard>
               </motion.div>
+              )}
             </div>
           </div>
         </section>

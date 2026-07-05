@@ -4,7 +4,8 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { ThemeToggle } from "./ThemeToggle"
 import { Button } from "@/components/ui/button"
-import { LogOut, User, LayoutDashboard } from "lucide-react"
+import { useVendorBookingCounts } from "@/hooks/useBooking"
+import { LogOut, User, LayoutDashboard, CalendarRange, Bell } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +17,10 @@ import {
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth()
+  const { data: bookingCounts } = useVendorBookingCounts(user?.role === "vendor")
 
   const dashboardLink = user?.role === "vendor" ? "/vendor/dashboard" : user?.role === "admin" ? "/admin" : "/"
+  const pendingCount = bookingCounts?.pending || 0
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-border bg-bgPrimary/80 backdrop-blur-xl">
@@ -29,6 +32,16 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
+          {user?.role === "vendor" && (
+            <Link href="/vendor/inquiries" className="relative flex h-9 w-9 items-center justify-center rounded-lg text-textMuted hover:text-textPrimary hover:bg-bgElevated transition-all">
+              <Bell className="h-5 w-5" />
+              {pendingCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white leading-none">
+                  {pendingCount > 9 ? "9+" : pendingCount}
+                </span>
+              )}
+            </Link>
+          )}
           <ThemeToggle />
 
           {isAuthenticated && user ? (
@@ -41,6 +54,13 @@ export function Navbar() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user?.role === "customer" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/bookings" className="flex items-center">
+                      <CalendarRange className="mr-2 h-4 w-4" /> My Bookings
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href={dashboardLink} className="flex items-center">
                     <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard

@@ -1,11 +1,15 @@
 package com.eventbooking.analytics;
 
 import com.eventbooking.common.ApiResponse;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -28,5 +32,19 @@ public class AnalyticsController {
         String ua = request.getHeader("User-Agent");
         service.logEvent(type, itemId, userId, ip, ua);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @GetMapping("/vendor")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getVendorAnalytics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            Authentication auth) {
+        UUID vendorId = UUID.fromString(auth.getName());
+        return ResponseEntity.ok(service.getVendorAnalytics(vendorId, from, to));
+    }
+
+    @GetMapping("/admin")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAdminAnalytics() {
+        return ResponseEntity.ok(service.getAdminAnalytics());
     }
 }

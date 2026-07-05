@@ -67,6 +67,8 @@ export interface Item {
   metaTitle: string
   metaDesc: string
   createdAt: string
+  avgRating?: number
+  reviewCount?: number
 }
 
 export interface PaginatedResponse<T> {
@@ -117,4 +119,60 @@ export interface VendorProfile {
   city: string
   logoUrl: string
   createdAt: string
+}
+
+export interface Booking {
+  id: string
+  itemId: string
+  itemTitle: string
+  itemSlug: string
+  itemPhotoUrl?: string
+  customerId: string
+  customerEmail: string
+  vendorId: string
+  vendorBusinessName: string
+  preferredDate: string
+  fromTime: string
+  toTime: string
+  fromLocation: string
+  toLocation: string
+  name: string
+  mobile: string
+  message: string
+  status: "pending" | "confirmed" | "cancelled"
+  createdAt: string
+}
+
+export interface BookingRequest {
+  itemId: string
+  preferredDate: string
+  fromTime: string
+  toTime: string
+  fromLocation: string
+  toLocation: string
+  name: string
+  mobile: string
+  message: string
+}
+
+export interface Review {
+  id: string
+  itemId: string
+  bookingId: string
+  customerId: string
+  customerName: string
+  rating: number
+  comment: string
+  createdAt: string
+}
+
+export interface ReviewRequest {
+  bookingId: string
+  rating: number
+  comment: string
+}
+
+export interface ReviewStats {
+  avgRating: number
+  reviewCount: number
 }

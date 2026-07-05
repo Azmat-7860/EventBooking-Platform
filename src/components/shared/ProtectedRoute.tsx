@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
 import { useEffect, ReactNode } from "react"
 import { UserRole } from "@/types"
+import { AUTH_TOKEN_KEY } from "@/lib/constants"
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -14,7 +15,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({
   children,
   allowedRoles,
-  redirectTo = "/auth",
+  redirectTo = "/",
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
@@ -22,12 +23,14 @@ export function ProtectedRoute({
   useEffect(() => {
     if (isLoading) return
     if (!isAuthenticated) {
+      const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null
+      if (token) { window.location.reload(); return }
       router.push(redirectTo)
       return
     }
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       const fallback =
-        user.role === "vendor" ? "/vendor/dashboard" : user.role === "admin" ? "/admin" : "/"
+        user.role === "vendor" ? "/vendor/dashboard" : user.role === "admin" ? "/admin" : "/bookings"
       router.push(fallback)
     }
   }, [isAuthenticated, isLoading, user, allowedRoles, redirectTo, router])

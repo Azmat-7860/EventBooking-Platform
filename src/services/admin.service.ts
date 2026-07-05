@@ -14,4 +14,25 @@ export const adminService = {
 
   deleteCategory: (id: string) =>
     api.delete(`/categories/${id}`),
+
+  getUsers: (params?: { page?: number; size?: number; role?: string; search?: string }) =>
+    api.get("/users", { params }),
+
+  suspendUser: (id: string) =>
+    api.put(`/users/${id}/suspend`),
+
+  reinstateUser: (id: string) =>
+    api.put(`/users/${id}/reinstate`),
+
+  getStats: () =>
+    api.get("/admin/stats"),
+
+  getAllBookings: (params?: { status?: string; page?: number; size?: number }) =>
+    api.get("/admin/bookings", { params }),
+
+  getAllReviews: (params?: { rating?: number; page?: number; size?: number }) =>
+    api.get("/admin/reviews", { params }),
+
+  deleteReview: (id: string) =>
+    api.delete(`/admin/reviews/${id}`),
 }

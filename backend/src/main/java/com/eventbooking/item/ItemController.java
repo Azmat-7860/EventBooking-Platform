@@ -38,10 +38,10 @@ public class ItemController {
     }
 
     @GetMapping("/{slugOrId}")
-    public ResponseEntity<ApiResponse<Item>> getBySlug(@PathVariable String slugOrId) {
+    public ResponseEntity<ApiResponse<ItemDetailResponse>> getBySlug(@PathVariable String slugOrId) {
         try {
             UUID id = UUID.fromString(slugOrId);
-            return ResponseEntity.ok(service.getById(id));
+            return ResponseEntity.ok(service.getDetailById(id));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.ok(service.getBySlug(slugOrId));
         }

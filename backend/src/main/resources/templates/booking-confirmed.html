@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { margin: 0; padding: 0; background: #0A0A0F; font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: #12121A; border: 1px solid #2A2A3A; border-radius: 12px; padding: 40px; }
+        .logo { font-size: 24px; font-weight: bold; color: #00D4FF; text-align: center; margin-bottom: 24px; }
+        h1 { color: #00FF88; font-size: 22px; text-align: center; margin-bottom: 12px; }
+        p { color: #8A8A9A; font-size: 15px; line-height: 1.6; margin-bottom: 8px; }
+        .detail { color: #FFFFFF; font-size: 15px; margin-bottom: 8px; }
+        .label { color: #555566; font-size: 13px; margin-bottom: 2px; }
+        .btn { display: inline-block; padding: 12px 32px; background: #00D4FF; color: #000; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; }
+        .footer { text-align: center; margin-top: 24px; color: #555566; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo" th:text="${brandName}">EventPro</div>
+            <h1>Booking Confirmed!</h1>
+            <p>Your booking for <strong th:text="${itemTitle}">Service Name</strong> has been confirmed by the vendor.</p>
+
+            <div style="margin: 20px 0; padding: 16px; background: #1A1A28; border-radius: 8px;">
+                <div class="label">Vendor</div>
+                <div class="detail" th:text="${vendorBusinessName}">Vendor Name</div>
+
+                <div class="label" style="margin-top: 12px;">Preferred Date</div>
+                <div class="detail" th:text="${preferredDate}">2026-07-15</div>
+
+                <div class="label" style="margin-top: 12px;">Status</div>
+                <div class="detail" style="color: #00FF88;">Confirmed</div>
+            </div>
+
+            <p>Please get in touch with the vendor to finalize the details.</p>
+
+            <div style="text-align: center; margin-top: 24px;">
+                <a class="btn" th:href="${bookingsUrl}" style="color: #000;">View My Bookings</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 <span th:text="${brandName}">EventPro</span></p>
+        </div>
+    </div>
+</body>
+</html>

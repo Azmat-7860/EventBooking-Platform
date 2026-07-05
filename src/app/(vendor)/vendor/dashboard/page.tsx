@@ -17,14 +17,16 @@ import { useToast } from "@/components/shared/Toast"
 import { useAuth } from "@/context/AuthContext"
 import { vendorService } from "@/services/vendor.service"
 import { useMyItems } from "@/hooks/useItems"
+import { useVendorBookingCounts, useVendorBookings } from "@/hooks/useBooking"
 import { staggerContainer, fadeUp } from "@/components/shared/animations"
-import { Package, BarChart3, Building2, Eye, UserCircle, Camera, Gift } from "lucide-react"
+import { Package, BarChart3, Building2, Eye, UserCircle, Camera, Gift, MessageSquare, CalendarCheck, CheckCircle2, Clock, ChevronRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function VendorDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const { data: items, isLoading: itemsLoading } = useMyItems()
+  const { data: bookingCounts, isLoading: countsLoading } = useVendorBookingCounts()
 
   const [showProfile, setShowProfile] = useState(false)
   const [businessName, setBusinessName] = useState("")
@@ -100,19 +102,21 @@ export default function VendorDashboard() {
             />
 
             {/* Stats */}
-            {itemsLoading ? (
-              <StatsGridSkeleton count={4} />
+            {(itemsLoading || countsLoading) ? (
+              <StatsGridSkeleton count={6} />
             ) : (
               <motion.div
                 variants={staggerContainer}
                 initial="hidden"
                 animate="visible"
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8"
+                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8"
               >
                 <StatsCard icon={Package} label="Total Items" value={items?.length || 0} accent />
                 <StatsCard icon={Eye} label="Published" value={publishedCount} />
                 <StatsCard icon={BarChart3} label="Drafts" value={draftCount} />
-                <StatsCard icon={UserCircle} label="Profile" value={profileExists ? "Complete" : "Incomplete"} accent={!profileExists} />
+                <StatsCard icon={MessageSquare} label="Inquiries" value={bookingCounts?.total || 0} />
+                <StatsCard icon={Clock} label="Pending" value={bookingCounts?.pending || 0} accent />
+                <StatsCard icon={CalendarCheck} label="This Month" value={bookingCounts?.thisMonth || 0} />
               </motion.div>
             )}
 
@@ -168,22 +172,52 @@ export default function VendorDashboard() {
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <div className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface/50 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bgElevated">
-                      <BarChart3 className="h-6 w-6 text-textMuted" />
+                <Link
+                  href="/vendor/inquiries"
+                  className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                      <MessageSquare className="h-6 w-6 text-accent" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-textMuted">Analytics</h3>
-                      <p className="mt-1 text-sm text-textMuted">View insights on views, shares, and inquiries</p>
-                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-textSubtle">
-                        Coming in Phase 6
+                      <h3 className="text-lg font-semibold text-textPrimary">Inquiries</h3>
+                      <p className="mt-1 text-sm text-textMuted">Review and manage customer booking requests</p>
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
+                        {bookingCounts?.pending || 0} pending
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
+              </motion.div>
+
+              <motion.div variants={fadeUp}>
+                <Link
+                  href="/vendor/analytics"
+                  className="group relative block overflow-hidden rounded-2xl border border-border bg-bgSurface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/30 hover:shadow-[0_0_30px_var(--accent-glow)]"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--accent-glow),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                      <BarChart3 className="h-6 w-6 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-textPrimary">Analytics</h3>
+                      <p className="mt-1 text-sm text-textMuted">View insights on views, shares, and inquiries</p>
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
+                        View analytics
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
               </motion.div>
             </motion.div>
+
+            {/* Recent Inquiries */}
+            <RecentInquiriesSection />
 
             {/* Profile Banner */}
             {!profileExists && (
@@ -269,5 +303,71 @@ export default function VendorDashboard() {
         </div>
       </PageTransition>
     </ProtectedRoute>
+  )
+}
+
+const statusColors: Record<string, string> = {
+  pending: "bg-warning/10 text-warning border-warning/20",
+  confirmed: "bg-success/10 text-success border-success/20",
+  cancelled: "bg-error/10 text-error border-error/20",
+}
+
+function RecentInquiriesSection() {
+  const { data, isLoading } = useVendorBookings(0, 5)
+
+  const bookings = data?.content || []
+
+  return (
+    <motion.div variants={fadeUp} className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-textPrimary">Recent Inquiries</h3>
+          <p className="text-sm text-textMuted">Latest booking requests from customers</p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="gap-1.5">
+          <Link href="/vendor/inquiries">
+            View all <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-textMuted" />
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-bgSurface p-8 text-center">
+          <MessageSquare className="h-8 w-8 text-textSubtle mx-auto mb-3" />
+          <p className="text-sm text-textMuted">No inquiries yet</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {bookings.map((booking: any) => (
+            <div
+              key={booking.id}
+              className="rounded-2xl border border-border bg-bgSurface p-4 transition-all duration-200 hover:border-accent/20"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-textPrimary">{booking.name}</span>
+                    <span className="text-xs text-textMuted">—</span>
+                    <span className="text-sm text-accent">{booking.itemTitle}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-textMuted">
+                    {booking.preferredDate && <span>{booking.preferredDate}</span>}
+                    {booking.fromTime && <span>{booking.fromTime}{booking.toTime ? `-${booking.toTime}` : ""}</span>}
+                    <span>{booking.mobile}</span>
+                  </div>
+                </div>
+                <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${statusColors[booking.status] || ""}`}>
+                  {booking.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
   )
 }

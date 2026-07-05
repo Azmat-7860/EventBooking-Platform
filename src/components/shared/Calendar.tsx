@@ -17,6 +17,7 @@ interface CalendarProps {
   onBlockDate: (date: string) => void
   onUnblockDate: (dateId: string) => void
   loading?: boolean
+  fullyBookedDates?: string[]
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -28,7 +29,7 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading }: CalendarProps) {
+export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading, fullyBookedDates }: CalendarProps) {
   const today = useMemo(() => toLocalDateStr(new Date()), [])
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth())
@@ -40,6 +41,10 @@ export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading }: 
     }
     return map
   }, [blockedDates])
+
+  const fullyBookedSet = useMemo(() => {
+    return new Set(fullyBookedDates || [])
+  }, [fullyBookedDates])
 
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const firstDayOfWeek = new Date(year, month, 1).getDay()
@@ -101,6 +106,7 @@ export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading }: 
           if (day === null) return <div key={`empty-${i}`} />
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
           const isBlocked = blockedMap.has(dateStr)
+          const isFullyBooked = fullyBookedSet.has(dateStr) && !isBlocked
           const isToday = dateStr === today
 
           return (
@@ -112,12 +118,17 @@ export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading }: 
                 "relative flex items-center justify-center h-9 rounded-lg text-sm font-medium transition-all duration-150",
                 isBlocked
                   ? "bg-error/15 text-error border border-error/20 hover:bg-error/25"
-                  : "text-textPrimary hover:bg-bgElevated",
-                isToday && !isBlocked && "ring-1 ring-accent/40 text-accent"
+                  : isFullyBooked
+                    ? "bg-warning/10 text-warning border border-warning/20"
+                    : "text-textPrimary hover:bg-bgElevated",
+                isToday && !isBlocked && !isFullyBooked && "ring-1 ring-accent/40 text-accent"
               )}
             >
               {isBlocked && (
                 <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-error" />
+              )}
+              {isFullyBooked && (
+                <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-warning" />
               )}
               {day}
             </motion.button>
@@ -130,6 +141,10 @@ export function Calendar({ blockedDates, onBlockDate, onUnblockDate, loading }: 
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded bg-error/20 border border-error/30" />
           Blocked
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded bg-warning/20 border border-warning/30" />
+          Fully Booked
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full ring-1 ring-accent/40 bg-transparent" />

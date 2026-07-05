@@ -1,6 +1,8 @@
 package com.eventbooking.item;
 
+import com.eventbooking.booking.BookingRepository;
 import com.eventbooking.common.ApiResponse;
+import com.eventbooking.review.ReviewRepository;
 import com.eventbooking.storage.StorageService;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -28,6 +30,8 @@ public class ItemService {
     private final ItemAvailabilityRepository availRepo;
     private final BundleRepository bundleRepo;
     private final BundleItemRepository bundleItemRepo;
+    private final BookingRepository bookingRepo;
+    private final ReviewRepository reviewRepo;
     private final StorageService storageService;
 
     private static final Pattern NON_LATIN = Pattern.compile("[^\\w-]");
@@ -35,12 +39,17 @@ public class ItemService {
 
     public ItemService(ItemRepository itemRepo, ItemPhotoRepository photoRepo,
                        ItemAvailabilityRepository availRepo, BundleRepository bundleRepo,
-                       BundleItemRepository bundleItemRepo, StorageService storageService) {
+                       BundleItemRepository bundleItemRepo,
+                       BookingRepository bookingRepo,
+                       ReviewRepository reviewRepo,
+                       StorageService storageService) {
         this.itemRepo = itemRepo;
         this.photoRepo = photoRepo;
         this.availRepo = availRepo;
         this.bundleRepo = bundleRepo;
         this.bundleItemRepo = bundleItemRepo;
+        this.bookingRepo = bookingRepo;
+        this.reviewRepo = reviewRepo;
         this.storageService = storageService;
     }
 
@@ -57,9 +66,13 @@ public class ItemService {
         return ApiResponse.ok(itemRepo.findByVendorIdOrderByCreatedAtDesc(vendorId));
     }
 
-    public ApiResponse<Item> getBySlug(String slug) {
+    public ApiResponse<ItemDetailResponse> getBySlug(String slug) {
         return itemRepo.findBySlug(slug)
-            .map(ApiResponse::ok)
+            .map(item -> {
+                double avgRating = reviewRepo.getAverageRatingByItemId(item.getId());
+                long reviewCount = reviewRepo.getReviewCountByItemId(item.getId());
+                return ApiResponse.ok(new ItemDetailResponse(item, avgRating, reviewCount));
+            })
             .orElse(ApiResponse.error("Item not found"));
     }
 
@@ -74,11 +87,15 @@ public class ItemService {
                 predicates.add(cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%"));
             }
             if (date != null) {
-                Subquery<UUID> subquery = query.subquery(UUID.class);
-                Root<ItemAvailability> availRoot = subquery.from(ItemAvailability.class);
-                subquery.select(availRoot.get("itemId"))
+                Subquery<UUID> blockedSub = query.subquery(UUID.class);
+                Root<ItemAvailability> availRoot = blockedSub.from(ItemAvailability.class);
+                blockedSub.select(availRoot.get("itemId"))
                         .where(cb.equal(availRoot.get("blockedDate"), date));
-                predicates.add(cb.not(root.get("id").in(subquery)));
+
+                List<UUID> bookedIds = bookingRepo.findItemIdsWithConfirmedBookingOnDate(date);
+                Predicate notBlocked = cb.not(root.get("id").in(blockedSub));
+                Predicate notBooked = cb.not(root.get("id").in(bookedIds));
+                predicates.add(cb.and(notBlocked, notBooked));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -89,6 +106,16 @@ public class ItemService {
     public ApiResponse<Item> getById(UUID id) {
         return itemRepo.findById(id)
             .map(ApiResponse::ok)
+            .orElse(ApiResponse.error("Item not found"));
+    }
+
+    public ApiResponse<ItemDetailResponse> getDetailById(UUID id) {
+        return itemRepo.findById(id)
+            .map(item -> {
+                double avgRating = reviewRepo.getAverageRatingByItemId(item.getId());
+                long reviewCount = reviewRepo.getReviewCountByItemId(item.getId());
+                return ApiResponse.ok(new ItemDetailResponse(item, avgRating, reviewCount));
+            })
             .orElse(ApiResponse.error("Item not found"));
     }
 

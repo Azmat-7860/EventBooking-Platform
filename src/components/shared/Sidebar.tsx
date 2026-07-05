@@ -14,6 +14,7 @@ import {
   Star,
   Layers,
   Gift,
+  MessageSquare,
 } from "lucide-react"
 
 interface SidebarLink {
@@ -26,6 +27,7 @@ const vendorLinks: SidebarLink[] = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vendor/items", label: "My Items", icon: Package },
   { href: "/vendor/bundles", label: "Bundles", icon: Gift },
+  { href: "/vendor/inquiries", label: "Inquiries", icon: MessageSquare },
   { href: "/vendor/analytics", label: "Analytics", icon: BarChart3 },
 ]
 
