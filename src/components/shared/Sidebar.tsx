@@ -50,12 +50,13 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
 
-  const links =
-    user?.role === "customer" ? customerLinks
-    : user?.role === "admin" ? adminLinks
-    : vendorLinks
+  // Only render sidebar on vendor and admin portal routes
+  const isVendorRoute = pathname.startsWith("/vendor") && user?.role === "vendor"
+  const isAdminRoute = pathname.startsWith("/admin") && user?.role === "admin"
 
-  if (!user) return null
+  if (!isVendorRoute && !isAdminRoute) return null
+
+  const links = isAdminRoute ? adminLinks : vendorLinks
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-bgSurface/50 backdrop-blur-sm md:block">

@@ -22,4 +22,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     Page<Review> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Review> findByRating(Integer rating, Pageable pageable);
+
+    Page<Review> findByIsFlaggedTrueOrderByCreatedAtDesc(Pageable pageable);
 }

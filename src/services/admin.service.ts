@@ -30,8 +30,11 @@ export const adminService = {
   getAllBookings: (params?: { status?: string; page?: number; size?: number }) =>
     api.get("/admin/bookings", { params }),
 
-  getAllReviews: (params?: { rating?: number; page?: number; size?: number }) =>
+  getAllReviews: (params?: { rating?: number; flagged?: boolean; page?: number; size?: number }) =>
     api.get("/admin/reviews", { params }),
+
+  flagReview: (id: string) =>
+    api.put(`/admin/reviews/${id}/flag`),
 
   deleteReview: (id: string) =>
     api.delete(`/admin/reviews/${id}`),

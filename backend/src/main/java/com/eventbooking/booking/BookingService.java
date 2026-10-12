@@ -181,4 +181,28 @@ public class BookingService {
     public ApiResponse<Long> getVendorConfirmedCount(UUID vendorId) {
         return ApiResponse.ok(bookingRepo.countByVendorIdAndStatus(vendorId, "confirmed"));
     }
+
+    public ApiResponse<Page<BookingResponse>> getAllBookingsForAdmin(String status, int page, int size) {
+        PageRequest pr = PageRequest.of(page, size);
+        Page<Booking> bookings;
+        if (status != null && !status.isBlank()) {
+            bookings = bookingRepo.findByStatusOrderByCreatedAtDesc(status, pr);
+        } else {
+            bookings = bookingRepo.findAllByOrderByCreatedAtDesc(pr);
+        }
+
+        Page<BookingResponse> response = bookings.map(b -> {
+            Item item = itemRepo.findById(b.getItemId()).orElse(null);
+            User customer = userRepo.findById(b.getCustomerId()).orElse(null);
+            VendorProfile vp = vendorProfileRepo.findByUserId(b.getVendorId()).orElse(null);
+            String photoUrl = item != null ? getItemPhotoUrl(item.getId()) : null;
+            return new BookingResponse(b,
+                    item != null ? item.getTitle() : "Unknown",
+                    item != null ? item.getSlug() : "",
+                    photoUrl,
+                    customer != null ? customer.getEmail() : "",
+                    vp != null ? vp.getBusinessName() : "Unknown");
+        });
+        return ApiResponse.ok(response);
+    }
 }

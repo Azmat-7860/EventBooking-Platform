@@ -59,6 +59,11 @@ export function Navbar() {
                     <Search className="mr-2 h-4 w-4" /> Browse Services
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" /> My Profile
+                  </Link>
+                </DropdownMenuItem>
                 {user?.role === "customer" && (
                   <DropdownMenuItem asChild>
                     <Link href="/bookings" className="flex items-center">

@@ -12,7 +12,7 @@ import { useAuth } from "@/context/AuthContext"
 import { adminService } from "@/services/admin.service"
 import { analyticsService } from "@/services/analytics.service"
 import { staggerContainer, fadeUp } from "@/components/shared/animations"
-import { Layers, Users, BookOpen, Star, Eye, MessageSquare, Share2, Loader2, CalendarDays } from "lucide-react"
+import { Layers, Users, BookOpen, Star, Eye, MessageSquare, Share2, Loader2, CalendarDays, Building2, Award } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
@@ -38,6 +38,14 @@ export default function AdminDashboard() {
     queryKey: ["admin-analytics"],
     queryFn: async () => {
       const { data } = await analyticsService.getAdminAnalytics()
+      return data.data
+    },
+  })
+
+  const { data: vendorLeaderboard } = useQuery({
+    queryKey: ["admin-vendor-analytics"],
+    queryFn: async () => {
+      const { data } = await analyticsService.getAdminVendorAnalytics()
       return data.data
     },
   })
@@ -109,20 +117,64 @@ export default function AdminDashboard() {
               </motion.div>
             )}
 
-            {/* Top Items */}
-            {analytics?.topItems?.length > 0 && (
-              <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-bgSurface p-5 sm:p-6 mb-8">
-                <h3 className="text-sm font-semibold text-textPrimary mb-4">Top 5 Services by Inquiries</h3>
-                <div className="space-y-2">
-                  {analytics.topItems.map((item: { itemId: string; count: number }, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-bgElevated">
-                      <span className="text-sm text-textPrimary">{item.itemId.slice(0, 8)}...</span>
-                      <span className="text-sm font-medium text-accent">{item.count} inquiries</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+            {/* Analytics Insights: Top Services & Vendor Leaderboard */}
+            <div className="grid gap-6 lg:grid-cols-2 mb-8">
+              {/* Top Services */}
+              {analytics?.topItems?.length > 0 ? (
+                <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-bgSurface p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Award className="h-4 w-4 text-accent" />
+                    <h3 className="text-sm font-semibold text-textPrimary">Top 5 Services by Inquiries</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {analytics.topItems.map((item: { itemId: string; itemTitle?: string; count: number }, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-bgElevated">
+                        <span className="text-sm text-textPrimary font-medium truncate max-w-[200px] sm:max-w-[260px]">
+                          {item.itemTitle || `${item.itemId.slice(0, 8)}...`}
+                        </span>
+                        <span className="text-xs font-semibold text-accent shrink-0">{item.count} inquiries</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : null}
+
+              {/* Vendor Leaderboard */}
+              {vendorLeaderboard && vendorLeaderboard.length > 0 ? (
+                <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-bgSurface p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building2 className="h-4 w-4 text-accent" />
+                    <h3 className="text-sm font-semibold text-textPrimary">Top Vendors Leaderboard</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {vendorLeaderboard.slice(0, 5).map((vendor: {
+                      vendorId: string
+                      businessName: string
+                      itemCount: number
+                      totalInquiries: number
+                      totalViews: number
+                      topItem: string
+                    }, i: number) => (
+                      <div key={vendor.vendorId} className="flex items-center justify-between p-3 rounded-xl bg-bgElevated">
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-textSubtle w-4">#{i + 1}</span>
+                            <span className="text-sm font-medium text-textPrimary truncate">{vendor.businessName}</span>
+                          </div>
+                          <p className="text-xs text-textMuted mt-0.5 pl-6 truncate">
+                            {vendor.itemCount} {vendor.itemCount === 1 ? "service" : "services"} • Top: {vendor.topItem}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-semibold text-accent block">{vendor.totalInquiries} inquiries</span>
+                          <span className="text-[11px] text-textSubtle">{vendor.totalViews} views</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : null}
+            </div>
 
             {/* Management Cards */}
             <motion.div

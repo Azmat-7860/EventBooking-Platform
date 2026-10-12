@@ -17,13 +17,16 @@ public class ReviewService {
     private final ReviewRepository reviewRepo;
     private final BookingRepository bookingRepo;
     private final UserRepository userRepo;
+    private final com.eventbooking.item.ItemRepository itemRepo;
 
     public ReviewService(ReviewRepository reviewRepo,
                          BookingRepository bookingRepo,
-                         UserRepository userRepo) {
+                         UserRepository userRepo,
+                         com.eventbooking.item.ItemRepository itemRepo) {
         this.reviewRepo = reviewRepo;
         this.bookingRepo = bookingRepo;
         this.userRepo = userRepo;
+        this.itemRepo = itemRepo;
     }
 
     public ApiResponse<ReviewResponse> createReview(ReviewRequest req, UUID customerId) {
@@ -52,16 +55,54 @@ public class ReviewService {
         User customer = userRepo.findById(customerId).orElse(null);
         String customerName = customer != null ? customer.getEmail() : "Unknown";
 
-        return ApiResponse.ok(new ReviewResponse(review, customerName), "Review submitted successfully");
+        ReviewResponse response = new ReviewResponse(review, customerName);
+        itemRepo.findById(booking.getItemId()).ifPresent(item -> response.setItemTitle(item.getTitle()));
+
+        return ApiResponse.ok(response, "Review submitted successfully");
     }
 
     public ApiResponse<Page<ReviewResponse>> getItemReviews(UUID itemId, int page, int size) {
         Page<Review> reviews = reviewRepo.findByItemIdOrderByCreatedAtDesc(itemId, PageRequest.of(page, size));
         Page<ReviewResponse> response = reviews.map(r -> {
             User customer = userRepo.findById(r.getCustomerId()).orElse(null);
-            return new ReviewResponse(r, customer != null ? customer.getEmail() : "Unknown");
+            ReviewResponse res = new ReviewResponse(r, customer != null ? customer.getEmail() : "Unknown");
+            itemRepo.findById(r.getItemId()).ifPresent(item -> res.setItemTitle(item.getTitle()));
+            return res;
         });
         return ApiResponse.ok(response);
+    }
+
+    public ApiResponse<Page<ReviewResponse>> getAllReviewsForAdmin(Integer rating, Boolean flagged, int page, int size) {
+        PageRequest pr = PageRequest.of(page, size);
+        Page<Review> reviews;
+        if (Boolean.TRUE.equals(flagged)) {
+            reviews = reviewRepo.findByIsFlaggedTrueOrderByCreatedAtDesc(pr);
+        } else if (rating != null) {
+            reviews = reviewRepo.findByRating(rating, pr);
+        } else {
+            reviews = reviewRepo.findAllByOrderByCreatedAtDesc(pr);
+        }
+
+        Page<ReviewResponse> response = reviews.map(r -> {
+            User customer = userRepo.findById(r.getCustomerId()).orElse(null);
+            ReviewResponse res = new ReviewResponse(r, customer != null ? customer.getEmail() : "Unknown");
+            itemRepo.findById(r.getItemId()).ifPresent(item -> res.setItemTitle(item.getTitle()));
+            return res;
+        });
+        return ApiResponse.ok(response);
+    }
+
+    public ApiResponse<ReviewResponse> toggleFlag(UUID reviewId) {
+        return reviewRepo.findById(reviewId).map(r -> {
+            boolean newFlag = !Boolean.TRUE.equals(r.getIsFlagged());
+            r.setIsFlagged(newFlag);
+            reviewRepo.save(r);
+
+            User customer = userRepo.findById(r.getCustomerId()).orElse(null);
+            ReviewResponse res = new ReviewResponse(r, customer != null ? customer.getEmail() : "Unknown");
+            itemRepo.findById(r.getItemId()).ifPresent(item -> res.setItemTitle(item.getTitle()));
+            return ApiResponse.ok(res, newFlag ? "Review flagged" : "Review unflagged");
+        }).orElse(ApiResponse.error("Review not found"));
     }
 
     public ApiResponse<ReviewStats> getItemReviewStats(UUID itemId) {

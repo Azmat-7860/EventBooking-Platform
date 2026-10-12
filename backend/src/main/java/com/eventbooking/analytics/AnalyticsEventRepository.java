@@ -13,6 +13,10 @@ public interface AnalyticsEventRepository extends JpaRepository<AnalyticsEvent, 
 
     long countByTypeAndItemIdAndCreatedAtBetween(String type, UUID itemId, Instant start, Instant end);
 
+    long countByTypeAndItemId(String type, UUID itemId);
+
+    long countByItemId(UUID itemId);
+
     long countByTypeAndUserIdAndCreatedAtBetween(String type, UUID userId, Instant start, Instant end);
 
     long countByTypeAndCreatedAtBetween(String type, Instant start, Instant end);

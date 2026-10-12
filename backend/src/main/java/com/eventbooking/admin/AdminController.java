@@ -1,22 +1,19 @@
 package com.eventbooking.admin;
 
-import com.eventbooking.booking.Booking;
 import com.eventbooking.booking.BookingRepository;
+import com.eventbooking.booking.BookingResponse;
+import com.eventbooking.booking.BookingService;
 import com.eventbooking.common.ApiResponse;
-import com.eventbooking.item.Item;
 import com.eventbooking.item.ItemRepository;
-import com.eventbooking.review.Review;
 import com.eventbooking.review.ReviewRepository;
-import com.eventbooking.user.User;
+import com.eventbooking.review.ReviewResponse;
+import com.eventbooking.review.ReviewService;
 import com.eventbooking.user.UserService;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,17 +24,23 @@ public class AdminController {
 
     private final UserService userService;
     private final BookingRepository bookingRepo;
+    private final BookingService bookingService;
     private final ItemRepository itemRepo;
     private final ReviewRepository reviewRepo;
+    private final ReviewService reviewService;
 
     public AdminController(UserService userService,
                            BookingRepository bookingRepo,
+                           BookingService bookingService,
                            ItemRepository itemRepo,
-                           ReviewRepository reviewRepo) {
+                           ReviewRepository reviewRepo,
+                           ReviewService reviewService) {
         this.userService = userService;
         this.bookingRepo = bookingRepo;
+        this.bookingService = bookingService;
         this.itemRepo = itemRepo;
         this.reviewRepo = reviewRepo;
+        this.reviewService = reviewService;
     }
 
     @GetMapping("/stats")
@@ -62,27 +65,25 @@ public class AdminController {
     }
 
     @GetMapping("/bookings")
-    public ResponseEntity<ApiResponse<Page<Booking>>> getAllBookings(
+    public ResponseEntity<ApiResponse<Page<BookingResponse>>> getAllBookings(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        PageRequest pr = PageRequest.of(page, size);
-        if (status != null && !status.isBlank()) {
-            return ResponseEntity.ok(ApiResponse.ok(bookingRepo.findByStatusOrderByCreatedAtDesc(status, pr)));
-        }
-        return ResponseEntity.ok(ApiResponse.ok(bookingRepo.findAllByOrderByCreatedAtDesc(pr)));
+        return ResponseEntity.ok(bookingService.getAllBookingsForAdmin(status, page, size));
     }
 
     @GetMapping("/reviews")
-    public ResponseEntity<ApiResponse<Page<Review>>> getAllReviews(
+    public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getAllReviews(
             @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) Boolean flagged,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        PageRequest pr = PageRequest.of(page, size);
-        if (rating != null) {
-            return ResponseEntity.ok(ApiResponse.ok(reviewRepo.findByRating(rating, pr)));
-        }
-        return ResponseEntity.ok(ApiResponse.ok(reviewRepo.findAllByOrderByCreatedAtDesc(pr)));
+        return ResponseEntity.ok(reviewService.getAllReviewsForAdmin(rating, flagged, page, size));
+    }
+
+    @PutMapping("/reviews/{id}/flag")
+    public ResponseEntity<ApiResponse<ReviewResponse>> toggleReviewFlag(@PathVariable UUID id) {
+        return ResponseEntity.ok(reviewService.toggleFlag(id));
     }
 
     @DeleteMapping("/reviews/{id}")

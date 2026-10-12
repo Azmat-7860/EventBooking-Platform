@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { analyticsService } from "@/services/analytics.service"
 import { useMyItems } from "@/hooks/useItems"
 import { staggerContainer, fadeUp } from "@/components/shared/animations"
-import { Eye, MessageSquare, Share2, CalendarDays, Loader2 } from "lucide-react"
+import { Eye, MessageSquare, Share2, CalendarDays, Loader2, Star } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export default function VendorAnalytics() {
@@ -21,7 +21,13 @@ export default function VendorAnalytics() {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
 
-  const { data: items } = useMyItems()
+  const { data: itemAnalytics, isLoading: itemsLoading } = useQuery({
+    queryKey: ["vendor-item-analytics"],
+    queryFn: async () => {
+      const { data } = await analyticsService.getVendorItemAnalytics()
+      return data.data
+    },
+  })
 
   const { data: analytics, isLoading } = useQuery({
     queryKey: ["vendor-analytics", from, to],
@@ -134,21 +140,37 @@ export default function VendorAnalytics() {
                       <span className="text-sm font-semibold text-textPrimary">Your Services</span>
                     </div>
                   </div>
-                  {items && items.length > 0 ? (
+                  {itemAnalytics && itemAnalytics.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left py-3 px-2 text-textMuted font-medium">Title</th>
+                            <th className="text-left py-3 px-3 text-textMuted font-medium">Title</th>
                             <th className="text-center py-3 px-2 text-textMuted font-medium">Status</th>
                             <th className="text-center py-3 px-2 text-textMuted font-medium">Views</th>
                             <th className="text-center py-3 px-2 text-textMuted font-medium">Inquiries</th>
+                            <th className="text-center py-3 px-2 text-textMuted font-medium">Shares</th>
+                            <th className="text-center py-3 px-2 text-textMuted font-medium">Rating</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {items.map((item: { id: string; title: string; status: string }) => (
+                          {itemAnalytics.map((item: {
+                            id: string
+                            title: string
+                            slug: string
+                            status: string
+                            views: number
+                            inquiries: number
+                            shares: number
+                            avgRating: number
+                            reviewCount: number
+                          }) => (
                             <tr key={item.id} className="border-b border-border/50 hover:bg-bgElevated/50 transition-colors">
-                              <td className="py-3 px-2 text-textPrimary">{item.title}</td>
+                              <td className="py-3 px-3">
+                                <span className="font-medium text-textPrimary hover:text-accent transition-colors">
+                                  {item.title}
+                                </span>
+                              </td>
                               <td className="py-3 px-2 text-center">
                                 <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
                                   item.status === "published" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20"
@@ -156,12 +178,28 @@ export default function VendorAnalytics() {
                                   {item.status}
                                 </span>
                               </td>
-                              <td className="py-3 px-2 text-center text-textMuted">—</td>
-                              <td className="py-3 px-2 text-center text-textMuted">—</td>
+                              <td className="py-3 px-2 text-center font-medium text-textPrimary">{item.views || 0}</td>
+                              <td className="py-3 px-2 text-center font-medium text-accent">{item.inquiries || 0}</td>
+                              <td className="py-3 px-2 text-center font-medium text-textMuted">{item.shares || 0}</td>
+                              <td className="py-3 px-2 text-center">
+                                {item.reviewCount > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-yellow-500">
+                                    <Star className="h-3 w-3 fill-yellow-500" />
+                                    {item.avgRating.toFixed(1)}
+                                    <span className="text-textSubtle font-normal">({item.reviewCount})</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-textSubtle">—</span>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  ) : itemsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-textMuted" />
                     </div>
                   ) : (
                     <p className="text-sm text-textMuted text-center py-6">No services created yet.</p>

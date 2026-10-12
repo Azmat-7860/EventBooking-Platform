@@ -12,19 +12,31 @@ import { Button } from "@/components/ui/button"
 import { adminService } from "@/services/admin.service"
 import { useToast } from "@/components/shared/Toast"
 import { staggerContainer, fadeUp } from "@/components/shared/animations"
-import { Loader2, Star, Trash2 } from "lucide-react"
+import { Loader2, Star, Trash2, Flag, AlertTriangle } from "lucide-react"
 
 export default function AdminReviews() {
   const { toast } = useToast()
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
+  const [flaggedFilter, setFlaggedFilter] = useState<string>("all")
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-reviews", page],
+    queryKey: ["admin-reviews", page, flaggedFilter],
     queryFn: async () => {
-      const { data } = await adminService.getAllReviews({ page, size: 20 })
+      const params: { page?: number; size?: number; flagged?: boolean } = { page, size: 20 }
+      if (flaggedFilter === "flagged") params.flagged = true
+      const { data } = await adminService.getAllReviews(params)
       return data.data
     },
+  })
+
+  const { mutate: toggleFlag, isPending: toggling } = useMutation({
+    mutationFn: (id: string) => adminService.flagReview(id),
+    onSuccess: (res: any) => {
+      toast("success", res.data?.message || "Review updated")
+      qc.invalidateQueries({ queryKey: ["admin-reviews"] })
+    },
+    onError: () => toast("error", "Failed to update review flag"),
   })
 
   const { mutate: removeReview, isPending: removing } = useMutation({
@@ -44,6 +56,18 @@ export default function AdminReviews() {
           <div className="relative p-4 sm:p-6 lg:p-8">
             <PageHeader title="Reviews" subtitle="Moderate platform reviews" />
 
+            {/* Filter */}
+            <motion.div variants={fadeUp} className="mb-6 flex items-center gap-3">
+              <select
+                value={flaggedFilter}
+                onChange={(e) => { setFlaggedFilter(e.target.value); setPage(0) }}
+                className="rounded-xl border border-border bg-bgElevated px-3 py-2 text-sm text-textPrimary outline-none focus:border-accent"
+              >
+                <option value="all">All Reviews</option>
+                <option value="flagged">Flagged Only</option>
+              </select>
+            </motion.div>
+
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-textMuted" />
@@ -56,15 +80,26 @@ export default function AdminReviews() {
                       <thead>
                         <tr className="border-b border-border bg-bgElevated/50">
                           <th className="text-left py-3 px-4 text-textMuted font-medium">Customer</th>
+                          <th className="text-left py-3 px-4 text-textMuted font-medium">Service</th>
                           <th className="text-center py-3 px-4 text-textMuted font-medium">Rating</th>
                           <th className="text-left py-3 px-4 text-textMuted font-medium">Comment</th>
+                          <th className="text-center py-3 px-4 text-textMuted font-medium">Status</th>
                           <th className="text-right py-3 px-4 text-textMuted font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {data?.content?.map((review: { id: string; customerName: string; rating: number; comment: string; createdAt: string }) => (
+                        {data?.content?.map((review: {
+                          id: string
+                          customerName: string
+                          itemTitle?: string
+                          rating: number
+                          comment: string
+                          flagged?: boolean
+                          createdAt: string
+                        }) => (
                           <tr key={review.id} className="border-b border-border/50 hover:bg-bgElevated/50 transition-colors">
                             <td className="py-3 px-4 text-textPrimary">{review.customerName}</td>
+                            <td className="py-3 px-4 text-textMuted font-medium">{review.itemTitle || "—"}</td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, i) => (
@@ -76,16 +111,37 @@ export default function AdminReviews() {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-textMuted max-w-xs truncate">{review.comment || "—"}</td>
+                            <td className="py-3 px-4 text-center">
+                              {review.flagged ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error/10 px-2 py-0.5 text-xs font-medium text-error">
+                                  <AlertTriangle className="h-3 w-3" /> Flagged
+                                </span>
+                              ) : (
+                                <span className="text-xs text-textSubtle">Normal</span>
+                              )}
+                            </td>
                             <td className="py-3 px-4 text-right">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                disabled={removing}
-                                onClick={() => removeReview(review.id)}
-                                className="gap-1.5"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" /> Delete
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={toggling}
+                                  onClick={() => toggleFlag(review.id)}
+                                  className={`gap-1 ${review.flagged ? "text-warning hover:text-warning" : "text-textMuted"}`}
+                                >
+                                  <Flag className={`h-3.5 w-3.5 ${review.flagged ? "fill-warning" : ""}`} />
+                                  {review.flagged ? "Unflag" : "Flag"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={removing}
+                                  onClick={() => removeReview(review.id)}
+                                  className="gap-1.5"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}

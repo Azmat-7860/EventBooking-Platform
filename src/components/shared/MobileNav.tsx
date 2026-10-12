@@ -28,12 +28,13 @@ export function MobileNav() {
   const pathname = usePathname()
   const { user } = useAuth()
 
-  if (!user) return null
+  // Only render on vendor and admin portal routes
+  const isVendorRoute = pathname.startsWith("/vendor") && user?.role === "vendor"
+  const isAdminRoute = pathname.startsWith("/admin") && user?.role === "admin"
 
-  const links =
-    user?.role === "customer" ? customerLinks
-    : user?.role === "admin" ? adminLinks
-    : vendorLinks
+  if (!isVendorRoute && !isAdminRoute) return null
+
+  const links = isAdminRoute ? adminLinks : vendorLinks
 
   return (
     <nav

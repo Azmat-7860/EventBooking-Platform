@@ -43,8 +43,19 @@ public class AnalyticsController {
         return ResponseEntity.ok(service.getVendorAnalytics(vendorId, from, to));
     }
 
+    @GetMapping("/vendor/items")
+    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getVendorItemAnalytics(Authentication auth) {
+        UUID vendorId = UUID.fromString(auth.getName());
+        return ResponseEntity.ok(service.getVendorItemAnalytics(vendorId));
+    }
+
     @GetMapping("/admin")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAdminAnalytics() {
         return ResponseEntity.ok(service.getAdminAnalytics());
+    }
+
+    @GetMapping("/admin/vendors")
+    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getAdminVendorAnalytics() {
+        return ResponseEntity.ok(service.getAdminVendorAnalytics());
     }
 }

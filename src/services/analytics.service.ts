@@ -7,6 +7,12 @@ export const analyticsService = {
   getVendorAnalytics: (params?: { from?: string; to?: string }) =>
     api.get("/analytics/vendor", { params }),
 
+  getVendorItemAnalytics: () =>
+    api.get("/analytics/vendor/items"),
+
   getAdminAnalytics: () =>
     api.get("/analytics/admin"),
+
+  getAdminVendorAnalytics: () =>
+    api.get("/analytics/admin/vendors"),
 }

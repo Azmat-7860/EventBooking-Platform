@@ -67,16 +67,33 @@ export default function AdminBookings() {
                       <thead>
                         <tr className="border-b border-border bg-bgElevated/50">
                           <th className="text-left py-3 px-4 text-textMuted font-medium">Customer</th>
-                          <th className="text-left py-3 px-4 text-textMuted font-medium">Item</th>
+                          <th className="text-left py-3 px-4 text-textMuted font-medium">Service</th>
+                          <th className="text-left py-3 px-4 text-textMuted font-medium">Vendor</th>
                           <th className="text-left py-3 px-4 text-textMuted font-medium">Date</th>
                           <th className="text-center py-3 px-4 text-textMuted font-medium">Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {data?.content?.map((booking: { id: string; name: string; itemTitle: string; preferredDate: string; status: string }) => (
+                        {data?.content?.map((booking: {
+                          id: string
+                          name: string
+                          customerEmail?: string
+                          itemTitle: string
+                          vendorBusinessName?: string
+                          preferredDate: string
+                          status: string
+                        }) => (
                           <tr key={booking.id} className="border-b border-border/50 hover:bg-bgElevated/50 transition-colors">
-                            <td className="py-3 px-4 text-textPrimary">{booking.name}</td>
-                            <td className="py-3 px-4 text-textMuted">{booking.itemTitle}</td>
+                            <td className="py-3 px-4 text-textPrimary">
+                              <div>
+                                <span className="font-medium">{booking.name || "Customer"}</span>
+                                {booking.customerEmail && (
+                                  <span className="block text-xs text-textMuted">{booking.customerEmail}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-textPrimary font-medium">{booking.itemTitle || "—"}</td>
+                            <td className="py-3 px-4 text-textMuted">{booking.vendorBusinessName || "—"}</td>
                             <td className="py-3 px-4 text-textMuted">{booking.preferredDate || "—"}</td>
                             <td className="py-3 px-4 text-center">
                               <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${statusColors[booking.status] || ""}`}>

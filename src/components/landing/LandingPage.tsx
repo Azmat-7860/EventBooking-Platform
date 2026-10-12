@@ -34,6 +34,8 @@ import {
   ChevronRight,
   BarChart3,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -225,13 +227,16 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function LandingPage() {
-  const { login, register, isAuthenticated } = useAuth()
+  const { user, login, register, isAuthenticated } = useAuth()
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login")
   const [authError, setAuthError] = useState("")
   const [authSuccess, setAuthSuccess] = useState("")
   const [isAuthLoading, setIsAuthLoading] = useState(false)
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegPassword, setShowRegPassword] = useState(false)
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false)
 
   // ─── Live data ──────────────────────────────────────────────────────────
   const { data: categories } = useCategories()
@@ -397,10 +402,12 @@ export function LandingPage() {
                   <TiltCard>
                     <div className="text-center py-8">
                       <h2 className="text-2xl font-bold text-textPrimary mb-2">Welcome back!</h2>
-                      <p className="text-sm text-textMuted mb-6">You are signed in.</p>
+                      <p className="text-sm text-textMuted mb-6">
+                        Signed in as <span className="font-semibold text-accent">{user?.email}</span>
+                      </p>
                       <Button asChild className="w-full gap-2">
-                        <Link href="/browse">
-                           <CalendarCheck className="h-4 w-4" /> {/*Browse Items */}Browse Services
+                        <Link href={user?.role === "vendor" ? "/vendor/dashboard" : user?.role === "admin" ? "/admin" : "/browse"}>
+                          <CalendarCheck className="h-4 w-4" /> {user?.role === "vendor" || user?.role === "admin" ? "Go to Dashboard" : "Browse Services"}
                         </Link>
                       </Button>
                     </div>
@@ -451,7 +458,23 @@ export function LandingPage() {
                               Forgot password?
                             </Link>
                           </div>
-                          <Input id="login-password" type="password" placeholder="••••••••" {...loginForm.register("password")} />
+                          <div className="relative">
+                            <Input
+                              id="login-password"
+                              type={showLoginPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              className="pr-10"
+                              {...loginForm.register("password")}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowLoginPassword((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary transition-colors focus:outline-none"
+                              aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                            >
+                              {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                           {loginForm.formState.errors.password && (
                             <p className="text-xs text-error">{loginForm.formState.errors.password.message}</p>
                           )}
@@ -488,14 +511,46 @@ export function LandingPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="reg-password">Password</Label>
-                          <Input id="reg-password" type="password" placeholder="••••••••" {...registerForm.register("password")} />
+                          <div className="relative">
+                            <Input
+                              id="reg-password"
+                              type={showRegPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              className="pr-10"
+                              {...registerForm.register("password")}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegPassword((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary transition-colors focus:outline-none"
+                              aria-label={showRegPassword ? "Hide password" : "Show password"}
+                            >
+                              {showRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                           {registerForm.formState.errors.password && (
                             <p className="text-xs text-error">{registerForm.formState.errors.password.message}</p>
                           )}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="reg-confirm">Confirm password</Label>
-                          <Input id="reg-confirm" type="password" placeholder="••••••••" {...registerForm.register("confirmPassword")} />
+                          <div className="relative">
+                            <Input
+                              id="reg-confirm"
+                              type={showRegConfirmPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              className="pr-10"
+                              {...registerForm.register("confirmPassword")}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegConfirmPassword((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-textPrimary transition-colors focus:outline-none"
+                              aria-label={showRegConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                              {showRegConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                           {registerForm.formState.errors.confirmPassword && (
                             <p className="text-xs text-error">{registerForm.formState.errors.confirmPassword.message}</p>
                           )}

@@ -27,12 +27,16 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(name = "is_flagged")
+    private Boolean isFlagged = false;
+
     @Column(name = "created_at")
     private Instant createdAt;
 
     @PrePersist
     void onCreate() {
         createdAt = Instant.now();
+        if (isFlagged == null) isFlagged = false;
     }
 
     public UUID getId() { return id; }
@@ -47,6 +51,8 @@ public class Review {
     public void setRating(Integer rating) { this.rating = rating; }
     public String getComment() { return comment; }
     public void setComment(String comment) { this.comment = comment; }
+    public Boolean getIsFlagged() { return isFlagged; }
+    public void setIsFlagged(Boolean isFlagged) { this.isFlagged = isFlagged; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

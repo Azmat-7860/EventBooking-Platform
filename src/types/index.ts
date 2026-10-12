@@ -158,12 +158,25 @@ export interface BookingRequest {
 export interface Review {
   id: string
   itemId: string
+  itemTitle?: string
   bookingId: string
   customerId: string
   customerName: string
   rating: number
   comment: string
+  flagged?: boolean
   createdAt: string
+}
+
+export interface UserProfile {
+  id?: string
+  userId?: string
+  fullName?: string
+  mobile?: string
+  address?: string
+  city?: string
+  photoUrl?: string
+  createdAt?: string
 }
 
 export interface ReviewRequest {
